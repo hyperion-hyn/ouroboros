@@ -1,3 +1,5 @@
+import requests
+import json
 from time import sleep
 from logging import getLogger
 from docker import DockerClient, tls
@@ -232,6 +234,23 @@ class Container(BaseImageObject):
 
         return monitored_containers
 
+    def check_can_update(self):
+        class JSONObject:
+            def __init__(self, d):
+                self.__dict__ = d
+        self.logger.info("in container")
+        url = "https://registry.tile.map3.network/tile/upgrade"
+        ret = requests.get(url)
+        if ret.status_code == 200:
+            resp = json.loads(ret.text, object_hook=JSONObject)
+            if resp.code == 0 and resp.update:
+                return True
+            else:
+                return False
+        else:
+            self.logger.error("Get upgrade info from remote server get error!")
+            return False
+
     # Socket Functions
     def self_check(self):
         if self.config.self_update:
@@ -300,6 +319,10 @@ class Container(BaseImageObject):
         try:
             updateable, depends_on_containers, hard_depends_on_containers = self.socket_check()
         except TypeError:
+            return
+
+        if not self.check_can_update():
+            self.logger.info("Check from remote server, return can not update, just return")
             return
 
         for container in depends_on_containers + hard_depends_on_containers:
@@ -403,6 +426,23 @@ class Service(BaseImageObject):
 
         return monitored_services
 
+    def check_can_update(self):
+        class JSONObject:
+            def __init__(self, d):
+                self.__dict__ = d
+        self.logger.info("in container")
+        url = "https://registry.tile.map3.network/tile/upgrade"
+        ret = requests.get(url)
+        if ret.status_code == 200:
+            resp = json.loads(ret.text, object_hook=JSONObject)
+            if resp.code == 0 and resp.update:
+                return True
+            else:
+                return False
+        else:
+            self.logger.error("Get upgrade info from remote server get error!")
+            return False
+
     def pull(self, tag):
         """Docker pull image tag"""
         return self._pull(tag)
@@ -413,6 +453,10 @@ class Service(BaseImageObject):
 
         if not self.monitored:
             self.logger.info('No services monitored')
+
+        if not self.check_can_update():
+            self.logger.info("Check from remote server, return can not update, just return")
+            return
 
         for service in self.monitored:
             image_string = service.attrs['Spec']['TaskTemplate']['ContainerSpec']['Image']
