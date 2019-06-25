@@ -238,7 +238,6 @@ class Container(BaseImageObject):
         class JSONObject:
             def __init__(self, d):
                 self.__dict__ = d
-        self.logger.info("in container")
         url = "https://registry.tile.map3.network/tile/upgrade"
         ret = requests.get(url)
         if ret.status_code == 200:
@@ -353,6 +352,11 @@ class Container(BaseImageObject):
                     self.client.images.remove(current_image.id)
                 except APIError as e:
                     self.logger.error("Could not delete old image for %s, Error: %s", container.name, e)
+                try:
+                    # remove all unused volumes
+                    self.docker.client.volumes.prune()
+                except APIError as e:
+                    self.logger.error("Could not delete unused volume for %s, Error: %s", container.name, e)
             updated_count += 1
 
             self.logger.debug("Incrementing total container updated count")
@@ -430,7 +434,6 @@ class Service(BaseImageObject):
         class JSONObject:
             def __init__(self, d):
                 self.__dict__ = d
-        self.logger.info("in container")
         url = "https://registry.tile.map3.network/tile/upgrade"
         ret = requests.get(url)
         if ret.status_code == 200:
