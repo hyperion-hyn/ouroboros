@@ -127,7 +127,7 @@ class Container(BaseImageObject):
     def remove(self, container):
         self.logger.debug('Removing container: %s', container.name)
         try:
-            container.remove(v=True)
+            container.remove()
         except NotFound as e:
             self.logger.error("Could not remove container. Error: %s", e)
             return
